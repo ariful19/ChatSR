@@ -2,7 +2,19 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="text-center" style="display: flex;justify-content: center;">
+    <input type="text" id="name" class="form-control" style="max-width:300px" />
+    <button class="btn btn-primary" type="button" onclick="GoClick()">Go</button>
 </div>
+
+@section Scripts{
+<script>
+    async function GoClick(){
+       var n=document.getElementById("name");
+       var res=await fetch("/Home/UserCheck",{body:JSON.stringify({Name:n.value,Id:0,Email:"",ConnectinId:null}),method:'POST',headers:{'Content-Type': 'application/json'}});
+       var b=await res.json();
+       sessionStorage.setItem("id",b.id);
+       window.open("/Chat",'_self');
+    }
+</script>
+}

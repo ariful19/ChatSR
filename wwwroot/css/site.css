@@ -1,18 +1,72 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+}
+
+.cntt {
+    display: grid;
+    grid-template-areas:
+        'b a a a'
+        'b a a a'
+        'b a a a'
+        'b a a a'
+        'b a a a'
+        'b c c c';
+    height: 77vh;
+}
+
+    .cntt > div:first-child {
+        grid-area: b;
+    }
+
+        .cntt > div:first-child > div:hover {
+            background-color: lightgray;
+        }
+
+.item-selectes {
+    background-color: azure;
+}
+
+.cntt > div:nth-child(2) {
+    grid-area: a;
+}
+
+.cntt > div:last-child {
+    grid-area: c;
+}
+
+.mi {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px; /* Preferred icon size */
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    /* Support for all WebKit browsers. */
+    -webkit-font-smoothing: antialiased;
+    /* Support for Safari and Chrome. */
+    text-rendering: optimizeLegibility;
+    /* Support for Firefox. */
+    -moz-osx-font-smoothing: grayscale;
+    /* Support for IE. */
+    font-feature-settings: 'liga';
 }
