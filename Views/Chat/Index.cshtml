@@ -7,7 +7,14 @@
     <div>
         <div v-for="i in users" :class="{'item-selectes':i.selected}" @@click="userClick(i)">{{i.name}}</div>
     </div>
-    <div>s2</div>
+    <div id="scrollcont">
+        <div class="msgcont" v-if="chats">
+            <div v-for="i in chats" :class="{msgfrom:i.isFrom,msgme:!i.isFrom}">
+                <div>{{i.time}}</div>
+                <div>{{i.message}}</div>
+            </div>
+        </div>
+    </div>
     <div style="display:flex;padding:1em">
         <textarea type="text" style="flex:1;margin-right:1em" class="form-control" v-model="message"></textarea>
         <button class="btn btn-primary" style="flex:.1;height:2.5em;align-self:center" @@click="sendClick()"><i class="mi">send</i></button>
@@ -15,6 +22,7 @@
 </div>
 
 @section Scripts{
+<script src="~/lib/moment.min.js"></script>
 <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
 <script src="~/lib/vue/dist/vue.global.js"></script>
 <script src="~/js/chatx.js" type="module"></script>

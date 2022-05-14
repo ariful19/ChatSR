@@ -31,10 +31,16 @@ body {
 
     .cntt > div:first-child {
         grid-area: b;
+        box-shadow: 1px 1px 5px;
+        padding: 0.5em;
     }
 
         .cntt > div:first-child > div:hover {
             background-color: lightgray;
+        }
+
+        .cntt > div:first-child > div {
+            border-bottom: solid thin lightgray;
         }
 
 .item-selectes {
@@ -43,6 +49,10 @@ body {
 
 .cntt > div:nth-child(2) {
     grid-area: a;
+    display: flex;
+    flex-flow: column;
+    justify-content: end;
+    overflow-y: auto;
 }
 
 .cntt > div:last-child {
@@ -70,3 +80,55 @@ body {
     /* Support for IE. */
     font-feature-settings: 'liga';
 }
+
+.msgfrom {
+    max-width: 80%;
+}
+
+    .msgfrom > div:first-child {
+    }
+
+    .msgfrom > div:last-child {
+        background-color: darkblue;
+        color: white;
+        padding: 0.3em;
+        border-radius: 1em;
+    }
+
+.msgme {
+    max-width: 80%;
+    align-self: end;
+}
+
+    .msgme > div:first-child {
+        align-self: end;
+    }
+
+    .msgme > div:last-child {
+        background-color: lightblue;
+        color: black;
+        padding: 0.3em;
+        border-radius: 1em;
+        align-self: flex-end;
+    }
+
+.msgcont {
+    display: flex;
+    flex-flow: column;
+    align-items: flex-start;
+    overflow-y: scroll;
+    padding: 0 1em;
+}
+
+    .msgcont > div {
+        display: flex;
+        flex-flow: column;
+        align-items: flex-start;
+    }
+
+        .msgcont > div > div:first-child {
+            margin-top: 0.4em;
+            color: gray;
+            font-size: 0.7em;
+            font-style: italic;
+        }

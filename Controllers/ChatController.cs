@@ -30,6 +30,14 @@ namespace ChatSR.Controllers
                 return Ok();
             }
         }
+
+        public async Task<IActionResult> GetChats([FromQuery]int from,[FromQuery]int me)
+        {
+            using var ctx= new ChatDbContext();
+            var q = ctx.Chats.Where(o => o.FromUser == from && o.ToUser == me || o.FromUser == me && o.ToUser == from);
+            var list = await q.ToListAsync();
+            return Json(list);
+        }
     }
 
     public class ConIdUpdModel

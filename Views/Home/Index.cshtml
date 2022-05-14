@@ -8,13 +8,24 @@
 </div>
 
 @section Scripts{
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+
 <script>
-    async function GoClick(){
-       var n=document.getElementById("name");
-       var res=await fetch("/Home/UserCheck",{body:JSON.stringify({Name:n.value,Id:0,Email:"",ConnectinId:null}),method:'POST',headers:{'Content-Type': 'application/json'}});
-       var b=await res.json();
-       sessionStorage.setItem("id",b.id);
-       window.open("/Chat",'_self');
-    }
+        var connection = new signalR.HubConnectionBuilder().withAutomaticReconnect().withUrl("/chatHub").build();
+            connection.start().then(function () {
+    }).catch(function (err) {
+        return console.error(err.toString());
+    });
+
+        async function GoClick(){
+           var n=document.getElementById("name");
+           var res=await fetch("/Home/UserCheck",{body:JSON.stringify({Name:n.value,Id:0,Email:"",ConnectinId:null}),method:'POST',headers:{'Content-Type': 'application/json'}});
+           var b=await res.json();
+           sessionStorage.setItem("id",b.id);
+            connection.invoke("UserUpdated", "", "").catch(function (err) {
+                return console.error(err.toString());
+            });
+           window.open("/Chat",'_self');
+        }
 </script>
 }

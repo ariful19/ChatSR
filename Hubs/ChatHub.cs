@@ -10,6 +10,10 @@ namespace ChatSR.Hubs
         {
             await Clients.All.SendAsync(toUser, message);
         }
+        public async Task UserUpdated(string toUser, string message)
+        {
+            await Clients.All.SendAsync("UserUpdated", toUser, message);
+        }
         public async Task SendMessage(string toUser, string message)
         {
             try
@@ -22,12 +26,14 @@ namespace ChatSR.Hubs
                 var toi = int.Parse(toUser);
                 User? toUseru = await ctx.Users.FirstAsync(o => o.Id == toi);
                 User? fromUser = await ctx.Users.FirstAsync(o => o.Id == fromi);
+                var id = await ctx.Chats.AnyAsync() ? await ctx.Chats.MaxAsync(o => o.Id) + 1 : 1;
+                var chat = new Chat { FromUser = fromi, ToUser = toi, Id = id, Message = message, Time = DateTime.Now };
+                ctx.Chats.Add(chat);
                 if (toUseru != null && toUseru.ConnectinId != null)
                 {
-                    await Clients.Client(toUseru.ConnectinId).SendAsync("ReceiveMessage", fromUser.Name, message);
+                    var json = System.Text.Json.JsonSerializer.Serialize(chat);
+                    await Clients.Client(toUseru.ConnectinId).SendAsync("ReceiveMessage", fromUser.Name, json);
                 }
-                var id = await ctx.Chats.AnyAsync() ? await ctx.Chats.MaxAsync(o => o.Id) + 1 : 1;
-                ctx.Chats.Add(new Chat { FromUser = fromi, ToUser = toi, Id = id, Message = message, Time = DateTime.Now });
                 await ctx.SaveChangesAsync();
             }
             catch (Exception ex)
