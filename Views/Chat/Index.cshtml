@@ -11,12 +11,24 @@
         <div class="msgcont" v-if="chats">
             <div v-for="i in chats" :class="{msgfrom:i.isFrom,msgme:!i.isFrom}">
                 <div>{{i.time}}</div>
-                <div>{{i.message}}</div>
+                <div v-if="i.message">{{i.message}}</div>
+                <div v-if="i.fileName">
+                    <div v-if="isImage(i.fileName)">
+                        <img style="max-width:400px" :src="'/Chat/GetFile?fn='+i.id+'_'+i.fileName" />
+                    </div>
+                    <div v-if="!isImage(i.fileName)">
+                        <a :href="'/Chat/GetFile?fn='+i.id+'_'+i.fileName">{{i.fileName}}</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div style="display:flex;padding:1em">
         <textarea type="text" style="flex:1;margin-right:1em" class="form-control" v-model="message" @@keypress="onKeyPress($event)"></textarea>
+        <div class="upload-btn-wrapper" style="height:2.5em;align-self:center">
+            <button class="btn btn-outline-info" style="border:none"><i class="mi">attachment</i></button>
+            <input type="file" name="myfile" @@change="onFileChange($event)" />
+        </div>
         <button class="btn btn-primary" style="flex:.1;height:2.5em;align-self:center" @@click="sendClick()"><i class="mi">send</i></button>
     </div>
 </div>

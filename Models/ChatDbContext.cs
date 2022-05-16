@@ -31,6 +31,7 @@ namespace ChatSR.Models
         public int FromUser { get; set; }
         public int ToUser { get; set; }
         public string Message { get; set; } = "";
+        public string? FileName { get; set; }
         public DateTime Time { get; set; }
 
     }

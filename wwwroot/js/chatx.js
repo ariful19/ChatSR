@@ -4,7 +4,7 @@ var connection = new signalR.HubConnectionBuilder().withAutomaticReconnect().wit
 connection.on("ReceiveMessage", function (user, message) {
     var msg = JSON.parse(message);//{Id: 7, FromUser: 2, ToUser: 1, Message: 'Hello Vue! c', Time: '2022-05-13T12:02:18.0842484+06:00'}
     var u = sessionStorage.getItem('id');
-    window.app.addChat(msg.Id, msg.FromUser, msg.ToUser, msg.Message, msg.Time, msg.ToUser == u);
+    window.app.addChat(msg.Id, msg.FromUser, msg.ToUser, msg.Message, msg.Time, msg.ToUser == u, msg.FileName);
     window.app.chatScrollToBottom(0);
 });
 connection.on("UserUpdated", function (user, message) {
@@ -60,10 +60,10 @@ window['app'] = createApp({
             });
             this.message = "";
         },
-        addChat(id, fromUser, toUser, message, time, isFrom) {
+        addChat(id, fromUser, toUser, message, time, isFrom, fileName = null) {
             var name = this.users.find(o => o.selected).name;
             var t = moment(time);
-            this.chats.push({ id: id, fromUser: fromUser, toUser: toUser, message: message, time: t.format('hh:mm:ssa DD-MM-yy'), isFrom: isFrom, name: isFrom ? name : "Me" });
+            this.chats.push({ id: id, fromUser: fromUser, toUser: toUser, message: message, time: t.format('hh:mm:ssa DD-MM-yy'), isFrom: isFrom, name: isFrom ? name : "Me", fileName: fileName });
             this.chatScrollToBottom(0);
         },
         chatScrollToBottom(delay) {
@@ -80,7 +80,35 @@ window['app'] = createApp({
                 e.preventDefault();
             }
             if (e.key == "\n") {
+                var elm = e.target;//as HTMLTextAreaElement;
+                var curPos = elm.selectionStart;
+                elm.value = elm.value.slice(0, curPos) + "\n" + elm.value.slice(curPos);
             }
+        },
+        async onFileChange(e) {
+            if (e.target.files) {
+                var file = e.target.files[0];// as File;
+                var frm = sessionStorage.getItem('id');
+                var to = this.users.find(o => o.selected);
+                var fd = new FormData();
+                fd.append("file", file, file.name);
+                fd.append("from", frm);
+                fd.append("to", to.id);
+                fd.append("message", this.message);
+                var res = await fetch("/Chat/FileUpload", {
+                    method: 'POST', body: fd
+                });
+                var json = await res.json();
+                if (res.ok) {
+                    this.addChat(json.chatId, frm, to.id, this.message, new Date(), false, file.name);
+                    this.message = "";
+                }
+            }
+        },
+        isImage(fn) {
+            var arr = fn.split('.');
+            var ext = arr[arr.length - 1].toLowerCase();
+            return ["jpg", "png", "jpeg", "gif"].find(o => o == ext);
         }
     }
 }).mount('#vapp')
