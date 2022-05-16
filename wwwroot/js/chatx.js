@@ -73,6 +73,14 @@ window['app'] = createApp({
                     elm.scrollTop = elm.scrollHeight;
                 }, delay);
             }
+        },
+        onKeyPress(e) {
+            if (e.key == 'Enter') {
+                this.sendClick();
+                e.preventDefault();
+            }
+            if (e.key == "\n") {
+            }
         }
     }
 }).mount('#vapp')
