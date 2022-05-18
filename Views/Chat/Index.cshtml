@@ -5,6 +5,17 @@
 }
 <div class="cntt" id="vapp">
     <div>
+        <div v-if="selectedUser">
+            <span>{{selectedUser.name}}</span>
+            <button @@click="onCallButton()"><i class="mi">call</i></button>
+            <button v-if="callStarted" @@click="onEndCallButton()"><i class="mi">call_end</i></button>
+        </div>
+        <div>
+            <audio id="localAudio" controls autoplay></audio>
+            <audio id="remoteAudio" controls autoplay></audio>
+        </div>
+    </div>
+    <div>
         <div v-for="i in users" :class="{'item-selectes':i.selected}" @@click="userClick(i)">{{i.name}}</div>
     </div>
     <div id="scrollcont">
@@ -37,5 +48,9 @@
 <script src="~/lib/moment.min.js"></script>
 <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
 <script src="~/lib/vue/dist/vue.global.js"></script>
+<script src="~/lib/alertify.min.js"></script>
+<script src="~/lib/adapter/adapter.js"></script>
+<script src="~/js/utilsRTC.js"></script>
+<script src="~/js/constWebRTC.js"></script>
 <script src="~/js/chatx.js" type="module"></script>
 }

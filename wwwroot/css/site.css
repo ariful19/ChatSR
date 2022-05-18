@@ -20,6 +20,7 @@ body {
 .cntt {
     display: grid;
     grid-template-areas:
+        'b d d d'
         'b a a a'
         'b a a a'
         'b a a a'
@@ -29,17 +30,21 @@ body {
     height: 77vh;
 }
 
-    .cntt > div:first-child {
+    .cntt > div:nth-child(1) {
+        grid-area: d;
+    }
+
+    .cntt > div:nth-child(2) {
         grid-area: b;
         box-shadow: 1px 1px 5px;
         padding: 0.5em;
     }
 
-        .cntt > div:first-child > div:hover {
+        .cntt > div:nth-child(2) > div:hover {
             background-color: lightgray;
         }
 
-        .cntt > div:first-child > div {
+        .cntt > div:nth-child(2) > div {
             border-bottom: solid thin lightgray;
         }
 
@@ -47,7 +52,7 @@ body {
     background-color: azure;
 }
 
-.cntt > div:nth-child(2) {
+.cntt > div:nth-child(3) {
     grid-area: a;
     display: flex;
     flex-flow: column;

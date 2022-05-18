@@ -35,4 +35,9 @@ namespace ChatSR.Models
         public DateTime Time { get; set; }
 
     }
+    public class CallOffer
+    {
+        public User Caller { get; set; }
+        public User Callee { get; set; }
+    }
 }

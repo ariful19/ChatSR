@@ -35,6 +35,8 @@ namespace ChatSR.Controllers
                 var u = await ctx.Users.FirstAsync(o => o.Id == model.Id);
                 u.ConnectinId = model.ConnectionId;
                 await ctx.SaveChangesAsync();
+                await chatHub.Clients.All.SendAsync("UserUpdated", "", "");
+
                 return Ok();
             }
         }
