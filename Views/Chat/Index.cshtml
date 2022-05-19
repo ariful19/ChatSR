@@ -11,8 +11,8 @@
             <button v-if="callStarted" @@click="onEndCallButton()"><i class="mi">call_end</i></button>
         </div>
         <div>
-            <audio id="localAudio" controls autoplay></audio>
-            <audio id="remoteAudio" controls autoplay></audio>
+            <video id="received_video" autoplay height="100" width="300"></video>
+            <video id="local_video" autoplay muted height="100" width="300"></video>
         </div>
     </div>
     <div>

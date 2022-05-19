@@ -1,10 +1,46 @@
 ﻿const { createApp } = Vue;
-var localAudio = document.querySelector('#localAudio');
-var remoteAudio = document.querySelector('#remoteAudio');
+"use strict";
 
-var yourConn;
-var stream;
-var partnerClientId;
+// Get our hostname
+
+var myHostname = window.location.hostname;
+if (!myHostname) {
+    myHostname = "localhost";
+}
+log("Hostname: " + myHostname);
+
+// WebSocket chat/signaling channel variables.
+
+var connection = null;
+var clientID = 0;
+var mediaConstraints = {
+    audio: true,            // We want an audio track
+    video: {
+        aspectRatio: {
+            ideal: 1.333333     // 3:2 aspect is preferred
+        }
+    }
+};
+
+var myUsername = null;
+var targetUsername = null;      // To store username of other peer
+var myPeerConnection = null;    // RTCPeerConnection
+var transceiver = null;         // RTCRtpTransceiver
+var webcamStream = null;        // MediaStream from webcam
+
+function log(text) {
+    var time = new Date();
+
+    console.log("[" + time.toLocaleTimeString() + "] " + text);
+}
+
+// Output an error message to console.
+
+function log_error(text) {
+    var time = new Date();
+
+    console.trace("[" + time.toLocaleTimeString() + "] " + text);
+}
 
 var wsconn = new signalR.HubConnectionBuilder().withAutomaticReconnect().withUrl("/chatHub").build();
 wsconn.on("ReceiveMessage", function (user, message) {
@@ -25,42 +61,6 @@ const errorHandler = (error) => {
 
     console.log(error);
 };
-function initUserMedia() {
-    navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then((myStream) => {
-        stream = myStream;
-
-        //displaying local audio stream on the page 
-        localAudio.srcObject = stream;
-
-        //using Google public stun server 
-        var configuration = {
-            "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
-        };
-
-        yourConn = new RTCPeerConnection(configuration);
-
-        // setup stream listening 
-        yourConn.addStream(stream);
-
-        //when a remote user adds stream to the peer connection, we display it 
-        yourConn.onaddstream = function (e) {
-            remoteAudio.srcObject = e.stream;
-        };
-
-        // Setup ice handling 
-        yourConn.onicecandidate = function (event) {
-            console.log(window.app.selectedUser.name + ": n cand");
-            if (event.candidate) {
-                wsconn.invoke("Message", "candidate", JSON.stringify({ Candidate: JSON.stringify(event.candidate), ConnectionId: window.app.selectedUser.connectinId }))
-            }
-        };
-
-    }, (error) => {
-        console.log(error);
-    });
-
-}
-
 wsconn.onclose(e => {
     if (e) {
         console.log("SignalR: closed with error.");
@@ -70,54 +70,185 @@ wsconn.onclose(e => {
         console.log("Disconnected");
     }
 });
-
-
 // Hub Callback: Call Accepted
 wsconn.on('CallAccepted', (acceptingUser) => {
     console.log('SignalR: call accepted from: ' + JSON.stringify(acceptingUser) + '.  Initiating WebRTC call and offering my stream up...');
     //{"id":1,"name":"arif","email":"","connectinId":"4lcWxCJVyye8F7tiqsO--A"}
-    initUserMedia();
-    var t = setInterval(() => {
-        if (yourConn) {
-            clearInterval(t);
-            window.app.callStarted = true;
-            yourConn.createOffer(function (offer) {
-                console.log(offer);
-                wsconn.invoke('Message', "offer", JSON.stringify({ Offer: JSON.stringify(offer), ConnectionId: window.app.selectedUser.connectinId })).catch(errorHandler);
+    invite();
+    //var t = setInterval(() => {
+    //    if (yourConn) {
+    //        clearInterval(t);
+    //        window.app.callStarted = true;
+    //        yourConn.createOffer(function (offer) {
+    //            console.log(offer);
+    //            wsconn.invoke('Message', "offer", JSON.stringify({ Offer: JSON.stringify(offer), ConnectionId: window.app.selectedUser.connectinId })).catch(errorHandler);
 
-                yourConn.setLocalDescription(offer);
-            }, function (error) {
-                alert("Error when creating an offer");
-            });
-        }
-    }, 500);
+    //            yourConn.setLocalDescription(offer);
+    //        }, function (error) {
+    //            alert("Error when creating an offer");
+    //        });
+    //    }
+    //}, 500);
 });
 // offer
-wsconn.on('Offer', (offer, connetionId) => {
-    var off = JSON.parse(offer);
+wsconn.on('Offer', async (off, connetionId) => {
 
-    yourConn.setRemoteDescription(new RTCSessionDescription(off));
+    var offer = JSON.parse(off);
+    // If we're not already connected, create an RTCPeerConnection
+    // to be linked to the caller.
 
-    //create an answer to an offer 
-    yourConn.createAnswer(function (answer) {
-        yourConn.setLocalDescription(answer);
-        wsconn.invoke('Message', "answer", JSON.stringify({ Answer: JSON.stringify(answer), ConnectionId: connetionId })).catch(errorHandler);
+    log("Received video chat offer from " + connetionId);
+    if (!myPeerConnection) {
+        createPeerConnection();
+    }
 
-    }, function (error) {
-        alert("Error when creating an answer");
-    });
+    // We need to set the remote description to the received SDP offer
+    // so that our local WebRTC layer knows how to talk to the caller.
+
+    var desc = new RTCSessionDescription(offer);
+
+    // If the connection isn't stable yet, wait for it...
+
+    if (myPeerConnection.signalingState != "stable") {
+        log("  - But the signaling state isn't stable, so triggering rollback");
+
+        // Set the local and remove descriptions for rollback; don't proceed
+        // until both return.
+        await Promise.all([
+            myPeerConnection.setLocalDescription({ type: "rollback" }),
+            myPeerConnection.setRemoteDescription(desc)
+        ]);
+        return;
+    } else {
+        log("  - Setting remote description");
+        await myPeerConnection.setRemoteDescription(desc);
+    }
+
+    // Get the webcam stream if we don't already have it
+
+    if (!webcamStream) {
+        try {
+            webcamStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+        } catch (err) {
+            handleGetUserMediaError(err);
+            return;
+        }
+
+        document.getElementById("local_video").srcObject = webcamStream;
+
+        // Add the camera stream to the RTCPeerConnection
+
+        try {
+            webcamStream.getTracks().forEach(
+                transceiver = track => myPeerConnection.addTransceiver(track, { streams: [webcamStream] })
+            );
+        } catch (err) {
+            handleGetUserMediaError(err);
+        }
+    }
+
+    log("---> Creating and sending answer to caller");
+
+    await myPeerConnection.setLocalDescription(await myPeerConnection.createAnswer());
+    wsconn.invoke('Message', "answer", JSON.stringify({ Answer: JSON.stringify(myPeerConnection.localDescription), ConnectionId: connetionId })).catch(errorHandler);
+    //sendToServer({
+    //    name: myUsername,
+    //    target: targetUsername,
+    //    type: "video-answer",
+    //    sdp: myPeerConnection.localDescription
+    //});
 });
 
-wsconn.on('Answer', (answer, connetionId) => {
-    var ans = JSON.parse(answer);
-    yourConn.setRemoteDescription(new RTCSessionDescription(ans));
+function handleGetUserMediaError(e) {
+    log_error(e);
+    switch (e.name) {
+        case "NotFoundError":
+            alert("Unable to open your call because no camera and/or microphone" +
+                "were found.");
+            break;
+        case "SecurityError":
+        case "PermissionDeniedError":
+            // Do nothing; this is the same as the user canceling the call.
+            break;
+        default:
+            alert("Error opening your camera and/or microphone: " + e.message);
+            break;
+    }
 
+    // Make sure we shut down our end of the RTCPeerConnection so we're
+    // ready to try again.
+
+    closeVideoCall();
+}
+function closeVideoCall() {
+    var localVideo = document.getElementById("local_video");
+
+    log("Closing the call");
+
+    // Close the RTCPeerConnection
+
+    if (myPeerConnection) {
+        log("--> Closing the peer connection");
+
+        // Disconnect all our event listeners; we don't want stray events
+        // to interfere with the hangup while it's ongoing.
+
+        myPeerConnection.ontrack = null;
+        myPeerConnection.onnicecandidate = null;
+        myPeerConnection.oniceconnectionstatechange = null;
+        myPeerConnection.onsignalingstatechange = null;
+        myPeerConnection.onicegatheringstatechange = null;
+        myPeerConnection.onnotificationneeded = null;
+
+        // Stop all transceivers on the connection
+
+        myPeerConnection.getTransceivers().forEach(transceiver => {
+            transceiver.stop();
+        });
+
+        // Stop the webcam preview as well by pausing the <video>
+        // element, then stopping each of the getUserMedia() tracks
+        // on it.
+
+        if (localVideo.srcObject) {
+            localVideo.pause();
+            localVideo.srcObject.getTracks().forEach(track => {
+                track.stop();
+            });
+        }
+
+        // Close the peer connection
+
+        myPeerConnection.close();
+        myPeerConnection = null;
+        webcamStream = null;
+    }
+
+    // Disable the hangup button
+
+    //document.getElementById("hangup-button").disabled = true;
+    targetUsername = null;
+}
+
+wsconn.on('Answer', async (answer, connetionId) => {
+    log("*** Call recipient has accepted our call");
+
+    // Configure the remote description, which is the SDP payload
+    // in our "video-answer" message.
+
+    var desc = new RTCSessionDescription(JSON.parse(answer));
+    await myPeerConnection.setRemoteDescription(desc).catch(reportError);
 });
 
-wsconn.on('Candidate', (candidate, connetionId) => {
+wsconn.on('Candidate', async (candidate, connetionId) => {
     var cand = JSON.parse(candidate);
 
-    yourConn.addIceCandidate(new RTCIceCandidate(cand));
+    log("*** Adding received ICE candidate: " + JSON.stringify(cand));
+    try {
+        await myPeerConnection.addIceCandidate(cand)
+    } catch (err) {
+        reportError(err);
+    }
 });
 // Hub Callback: Call Declined
 wsconn.on('CallDeclined', (decliningUser, reason) => {
@@ -141,7 +272,6 @@ wsconn.on('IncomingCall', (callingUser) => {
             // I want to chat
             wsconn.invoke('AnswerCall', true, callingUser).catch(err => console.log(err));
             window.app.callStarted = true;
-            initUserMedia();
         } else {
             // Go away, I don't want to chat with you
             wsconn.invoke('AnswerCall', false, callingUser).catch(err => console.log(err));
@@ -149,11 +279,6 @@ wsconn.on('IncomingCall', (callingUser) => {
     });
 });
 
-// Hub Callback: WebRTC Signal Received
-wsconn.on('Candidate', (candidate, fromConn) => {
-    yourConn.addIceCandidate(new RTCIceCandidate(candidate));
-
-});
 
 // Hub Callback: Call Ended
 wsconn.on('CallEnded', (signalingUser, signal) => {
@@ -170,7 +295,166 @@ wsconn.on('CallEnded', (signalingUser, signal) => {
 
     // Set the UI back into idle mode
 });
+async function invite() {
+    log("Starting to prepare an invitation");
+    if (myPeerConnection) {
+        alert("You can't start a call because you already have one open!");
+    } else {
+        var clickedUsername = window.app.selectedUser.name;
 
+        // Don't allow users to call themselves, because weird.
+
+        if (clickedUsername === myUsername) {
+            alert("I'm afraid I can't let you talk to yourself. That would be weird.");
+            return;
+        }
+
+        // Record the username being called for future reference
+
+        targetUsername = clickedUsername;
+        log("Inviting user " + targetUsername);
+
+        // Call createPeerConnection() to create the RTCPeerConnection.
+        // When this returns, myPeerConnection is our RTCPeerConnection
+        // and webcamStream is a stream coming from the camera. They are
+        // not linked together in any way yet.
+
+        log("Setting up connection to invite user: " + targetUsername);
+        createPeerConnection();
+
+        // Get access to the webcam stream and attach it to the
+        // "preview" box (id "local_video").
+
+        try {
+            webcamStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+            document.getElementById("local_video").srcObject = webcamStream;
+        } catch (err) {
+            handleGetUserMediaError(err);
+            return;
+        }
+
+        // Add the tracks from the stream to the RTCPeerConnection
+
+        try {
+            webcamStream.getTracks().forEach(
+                transceiver = track => myPeerConnection.addTransceiver(track, { streams: [webcamStream] })
+            );
+        } catch (err) {
+            handleGetUserMediaError(err);
+        }
+    }
+}
+
+async function createPeerConnection() {
+    log("Setting up a connection...");
+
+    // Create an RTCPeerConnection which knows to use our chosen
+    // STUN server.
+
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: "stun:stun.stunprotocol.org"
+            },
+            {
+                urls: 'turn:numb.viagenie.ca',
+                credential: 'muazkh',
+                username: 'webrtc@live.com'
+            },
+        ]
+    });
+
+    // Set up event handlers for the ICE negotiation process.
+
+    myPeerConnection.onicecandidate = handleICECandidateEvent;
+    myPeerConnection.oniceconnectionstatechange = handleICEConnectionStateChangeEvent;
+    myPeerConnection.onicegatheringstatechange = handleICEGatheringStateChangeEvent;
+    myPeerConnection.onsignalingstatechange = handleSignalingStateChangeEvent;
+    myPeerConnection.onnegotiationneeded = handleNegotiationNeededEvent;
+    myPeerConnection.ontrack = handleTrackEvent;
+}
+function handleTrackEvent(event) {
+    log("*** Track event");
+    document.getElementById("received_video").srcObject = event.streams[0];
+    /*document.getElementById("hangup-button").disabled = false;*/
+}
+function handleSignalingStateChangeEvent(event) {
+    log("*** WebRTC signaling state changed to: " + myPeerConnection.signalingState);
+    switch (myPeerConnection.signalingState) {
+        case "closed":
+            closeVideoCall();
+            break;
+    }
+}
+function handleICEGatheringStateChangeEvent(event) {
+    log("*** ICE gathering state changed to: " + myPeerConnection.iceGatheringState);
+}
+function handleICEConnectionStateChangeEvent(event) {
+    log("*** ICE connection state changed to " + myPeerConnection.iceConnectionState);
+
+    switch (myPeerConnection.iceConnectionState) {
+        case "closed":
+        case "failed":
+        case "disconnected":
+            closeVideoCall();
+            break;
+    }
+}
+function handleICECandidateEvent(event) {
+    if (event.candidate) {
+        log("*** Outgoing ICE candidate: " + event.candidate.candidate);
+
+        //sendToServer({
+        //    type: "new-ice-candidate",
+        //    target: targetUsername,
+        //    candidate: event.candidate
+        //});
+        wsconn.invoke("Message", "candidate", JSON.stringify({ Candidate: JSON.stringify(event.candidate), ConnectionId: window.app.selectedUser.connectinId }))
+    }
+}
+// Called by the WebRTC layer to let us know when it's time to
+// begin, resume, or restart ICE negotiation.
+
+async function handleNegotiationNeededEvent() {
+    log("*** Negotiation needed");
+
+    try {
+        log("---> Creating offer");
+        const offer = await myPeerConnection.createOffer();
+
+        // If the connection hasn't yet achieved the "stable" state,
+        // return to the caller. Another negotiationneeded event
+        // will be fired when the state stabilizes.
+
+        if (myPeerConnection.signalingState != "stable") {
+            log("     -- The connection isn't stable yet; postponing...")
+            return;
+        }
+
+        // Establish the offer as the local peer's current
+        // description.
+
+        log("---> Setting local description to the offer");
+        await myPeerConnection.setLocalDescription(offer);
+
+        // Send the offer to the remote peer.
+
+        log("---> Sending the offer to the remote peer");
+        //sendToServer({
+        //    name: myUsername,
+        //    target: targetUsername,
+        //    type: "video-offer",
+        //    sdp: myPeerConnection.localDescription
+        //});
+        wsconn.invoke('Message', "offer", JSON.stringify({ Offer: JSON.stringify(myPeerConnection.localDescription), ConnectionId: window.app.selectedUser.connectinId })).catch(errorHandler);
+    } catch (err) {
+        log("*** The following error occurred while handling the negotiationneeded event:");
+        reportError(err);
+    };
+}
+function reportError(errMessage) {
+    log_error(`Error ${errMessage.name}: ${errMessage.message}`);
+}
 
 window['app'] = createApp({
     data() {
