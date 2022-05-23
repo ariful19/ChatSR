@@ -17,6 +17,14 @@
         "dist/vue.global.js",
         "dist/vue.global.prod.js"
       ]
+    },
+    {
+      "library": "peerjs@1.4.4",
+      "destination": "wwwroot/lib/peerjs/",
+      "files": [
+        "dist/peerjs.min.js",
+        "dist/types.d.ts"
+      ]
     }
   ]
 }

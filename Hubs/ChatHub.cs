@@ -50,7 +50,7 @@ namespace ChatSR.Hubs
         }
 
         #region calls
-        public async Task Message(string message,string obj)
+        public async Task Message(string message, string obj)
         {
             try
             {
@@ -67,6 +67,10 @@ namespace ChatSR.Hubs
                     case "answer":
                         var xobj2 = System.Text.Json.JsonSerializer.Deserialize<ObjAnswer>(obj);
                         await Clients.Client(xobj2.ConnectionId).SendAsync("Answer", xobj2.Answer, Context.ConnectionId);
+                        break;
+                    case "peerId":
+                        var xobj3 = System.Text.Json.JsonSerializer.Deserialize<ObjPeerId>(obj);
+                        await Clients.Client(xobj3.ConnectionId).SendAsync("PeerId", xobj3.PeerId, Context.ConnectionId);
                         break;
                     default:
                         break;
@@ -193,19 +197,26 @@ namespace ChatSR.Hubs
             // Update the user list, since thes two are now in a call
             //await SendUserListUpdate();
         }
-        public async Task HangUp()
+        public async Task HangUp(string tgt)
         {
 
             // Remove all offers initiating from the caller
             _CallOffers.RemoveAll(c => c.Caller.ConnectinId == Context.ConnectionId || c.Callee.ConnectinId == Context.ConnectionId);
+            await Clients.Client(tgt).SendAsync("CallEnded");
         }
 
         #endregion
     }
 
+    internal class ObjPeerId
+    {
+        public string ConnectionId { get; set; }
+        public string PeerId { get; set; }
+    }
+
     internal class ObjAnswer
     {
-        public string ConnectionId { get;  set; }
+        public string ConnectionId { get; set; }
         public string Answer { get; set; }
     }
 
@@ -218,6 +229,6 @@ namespace ChatSR.Hubs
     internal class ObjCandidate
     {
         public string ConnectionId { get; set; }
-        public string Candidate{ get; set; }
+        public string Candidate { get; set; }
     }
 }

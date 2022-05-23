@@ -14,6 +14,10 @@
             <video id="received_video" autoplay height="100" width="300"></video>
             <video id="local_video" autoplay muted height="100" width="300"></video>
         </div>
+        @*<div>
+            <audio id="received_video" autoplay controls></audio>
+            <audio id="local_video" autoplay muted controls></audio>
+            </div>*@
     </div>
     <div>
         <div v-for="i in users" :class="{'item-selectes':i.selected}" @@click="userClick(i)">{{i.name}}</div>
@@ -49,8 +53,9 @@
 <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
 <script src="~/lib/vue/dist/vue.global.js"></script>
 <script src="~/lib/alertify.min.js"></script>
+<script src="~/lib/peerjs/dist/peerjs.min.js"></script>
 <script src="~/lib/adapter/adapter.js"></script>
-<script src="~/js/utilsRTC.js"></script>
-<script src="~/js/constWebRTC.js"></script>
-<script src="~/js/chatx.js" type="module"></script>
+@*<script src="~/js/utilsRTC.js"></script>
+    <script src="~/js/constWebRTC.js"></script>*@
+<script src="~/js/chat2.js" type="module"></script>
 }
