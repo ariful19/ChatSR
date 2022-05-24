@@ -161,3 +161,10 @@ body {
     top: 0;
     opacity: 0;
 }
+
+.topname {
+    padding: 0.7em 1em;
+    font-weight: bold;
+    border-bottom: thin solid lightblue;
+    margin-bottom: 0.4em;
+}

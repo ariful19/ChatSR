@@ -1,5 +1,5 @@
 ﻿const { createApp } = Vue;
-"use strict";
+//"use strict";
 var peer = null; // own peer object
 var lastPeerId = null;
 var conn = null;
@@ -71,6 +71,9 @@ var wsconn = new signalR.HubConnectionBuilder().withAutomaticReconnect().withUrl
 wsconn.on("ReceiveMessage", function (user, message) {
     var msg = JSON.parse(message);//{Id: 7, FromUser: 2, ToUser: 1, Message: 'Hello Vue! c', Time: '2022-05-13T12:02:18.0842484+06:00'}
     var u = sessionStorage.getItem('id');
+    var su = window.app.users.find(o => o.id == msg.FromUser);
+    if (!su.selected)
+        window.app.userClick(su);
     window.app.addChat(msg.Id, msg.FromUser, msg.ToUser, msg.Message, msg.Time, msg.ToUser == u, msg.FileName);
     window.app.chatScrollToBottom(0);
 });
@@ -187,7 +190,8 @@ window['app'] = createApp({
             users: null,
             chats: null,
             selectedUser: null,
-            callStarted: false
+            callStarted: false,
+            callEnabled: false
             //    [
             //    { id: 1, fromUser: 1, toUser: 2, message: 'Hello Vue!', time: '2022-05-12T23:16:21.4927953' },
             //],
@@ -233,7 +237,7 @@ window['app'] = createApp({
             });
             this.chats = data;
 
-            this.chatScrollToBottom(1000);
+            this.chatScrollToBottom(100);
         },
         sendClick() {
             var frm = sessionStorage.getItem('id');
@@ -251,12 +255,15 @@ window['app'] = createApp({
             this.chatScrollToBottom(0);
         },
         chatScrollToBottom(delay) {
-            var elm = document.querySelector(".msgcont");
-            if (elm) {
-                setTimeout(() => {
-                    elm.scrollTop = elm.scrollHeight;
-                }, delay);
-            }
+            var ivalelm = setInterval(() => {
+                var elm = document.querySelector(".msgcont");// as HTMLElement;
+                if (elm) {
+                    setTimeout(() => {
+                        elm.scrollTop = elm.scrollHeight;
+                    }, delay);
+                    clearInterval(ivalelm);
+                }
+            }, delay / 2);
         },
         onKeyPress(e) {
             if (e.key == 'Enter') {

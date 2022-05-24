@@ -5,12 +5,12 @@
 }
 <div class="cntt" id="vapp">
     <div>
-        <div v-if="selectedUser">
+        <div v-if="selectedUser" class="topname">
             <span>{{selectedUser.name}}</span>
-            <button @@click="onCallButton()"><i class="mi">call</i></button>
-            <button v-if="callStarted" @@click="onEndCallButton()"><i class="mi">call_end</i></button>
+            <button v-if="callEnabled" @@click="onCallButton()"><i class="mi">call</i></button>
+            <button v-if="callEnabled && callStarted" @@click="onEndCallButton()"><i class="mi">call_end</i></button>
         </div>
-        <div>
+        <div v-if="callEnabled">
             <video id="received_video" autoplay height="100" width="300"></video>
             <video id="local_video" autoplay muted height="100" width="300"></video>
         </div>
@@ -57,5 +57,5 @@
 <script src="~/lib/adapter/adapter.js"></script>
 @*<script src="~/js/utilsRTC.js"></script>
     <script src="~/js/constWebRTC.js"></script>*@
-<script src="~/js/chat2.js" type="module"></script>
+<script src="~/js/chatx.js" type="module"></script>
 }
