@@ -48,7 +48,10 @@ namespace ChatSR.Hubs
                 System.IO.File.AppendAllText("log.txt", ex.Message);
             }
         }
-
+        public async Task NewId(string id)
+        {
+            await Clients.All.SendAsync("NewId", id);
+        }
         #region calls
         public async Task Message(string message, string obj)
         {

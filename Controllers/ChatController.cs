@@ -18,7 +18,10 @@ namespace ChatSR.Controllers
         {
             return View();
         }
-
+        public IActionResult One2one()
+        {
+            return View();
+        }
         public async Task<IActionResult> GetUsers()
         {
             using (var ctx = new ChatDbContext())
